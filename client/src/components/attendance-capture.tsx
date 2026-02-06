@@ -99,18 +99,22 @@ export function AttendanceCapture({ taskId, onSuccess }: AttendanceCaptureProps)
       <CardContent className="space-y-4">
         <div className="relative aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
           {isCapturing ? (
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full relative">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : capturedImage ? (
-            <img 
-              src={capturedImage} 
-              alt="Captured" 
-              className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full relative">
+              <img 
+                src={capturedImage} 
+                alt="Captured" 
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : (
             <div className="text-center p-4">
               <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
