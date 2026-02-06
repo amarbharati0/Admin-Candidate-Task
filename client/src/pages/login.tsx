@@ -27,12 +27,6 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Redirect if already logged in
-  if (user) {
-    setLocation(user.role === "admin" ? "/admin" : "/candidate");
-    return null;
-  }
-
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -40,6 +34,14 @@ export default function Login() {
       password: "",
     },
   });
+
+  // Redirect if already logged in (using useEffect to avoid early return hook violation)
+  const [redirected, setRedirected] = useState(false);
+  if (user && !redirected) {
+    setLocation(user.role === "admin" ? "/admin" : "/candidate");
+    setRedirected(true);
+    return null;
+  }
 
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     try {
