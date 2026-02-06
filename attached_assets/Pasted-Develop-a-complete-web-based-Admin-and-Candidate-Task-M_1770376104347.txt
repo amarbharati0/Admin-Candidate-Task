@@ -1,0 +1,11 @@
+Develop a complete web-based Admin and Candidate Task Management System that allows efficient task assignment, submission tracking, and performance reporting. The system should include secure authentication with role-based access for Admin and Candidates, ensuring proper data security and access control.
+
+The Admin panel should allow administrators to create, update, and manage candidate profiles with a unique Candidate ID assigned to each candidate. Admin should be able to assign tasks individually or collectively to candidates and monitor their progress through a centralized dashboard. The dashboard should display task status, submission history, and candidate performance metrics in an organized way.
+
+Candidates should be able to self-register, securely log in, and access their personal dashboard. From there, they should be able to view assigned tasks, submission deadlines, and instructions clearly. Candidates must be able to submit tasks in multiple formats such as text input, Word documents, PDF files, photos, or image files. Each submission should be securely stored and mapped specifically to the candidate’s unique ID so that data remains organized and easily retrievable.
+
+Whenever a candidate submits a task, it should automatically appear on the admin dashboard for review. The Admin should be able to evaluate submissions, provide feedback, and generate detailed performance reports in PDF format. These reports should be accessible to both Admin and Candidate dashboards for transparency and future reference.
+
+The system should also include features such as task submission tracking, notification updates, secure file upload and storage, report generation, candidate activity logs, and a clean, user-friendly dashboard interface. Proper database structure, authentication security, file handling, and role-based access control should be implemented to ensure reliability, scalability, and smooth system operation.
+
+The final system should be responsive, secure, scalable, and easy to use for both Admin and Candidates while maintaining structured data flow, performance monitoring, and effective communication through reports and task tracking.
