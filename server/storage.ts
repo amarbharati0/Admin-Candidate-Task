@@ -1,12 +1,13 @@
-import { users, tasks, submissions, type User, type InsertUser, type Task, type InsertTask, type Submission, type InsertSubmission } from "@shared/schema";
+import { users, tasks, submissions, attendance, type User, type InsertUser, type Task, type InsertTask, type Submission, type InsertSubmission, type Attendance, type InsertAttendance } from "@shared/schema";
 import { db } from "./db";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
   getUsersByRole(role?: 'admin' | 'candidate'): Promise<User[]>;
 
   // Tasks
@@ -21,6 +22,10 @@ export interface IStorage {
   getSubmission(id: number): Promise<Submission | undefined>;
   createSubmission(submission: InsertSubmission): Promise<Submission>;
   updateSubmission(id: number, submission: Partial<InsertSubmission>): Promise<Submission | undefined>;
+
+  // Attendance
+  createAttendance(attendance: InsertAttendance): Promise<Attendance>;
+  getAttendance(userId?: number, taskId?: number): Promise<Attendance[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -36,6 +41,11 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
     return user;
   }
   
@@ -73,7 +83,17 @@ export class DatabaseStorage implements IStorage {
   // Submissions
   async getSubmissions(taskId?: number, candidateId?: number): Promise<(Submission & { candidate: User, task: Task })[]> {
     let query = db.select({
-      ...submissions,
+      id: submissions.id,
+      taskId: submissions.taskId,
+      candidateId: submissions.candidateId,
+      content: submissions.content,
+      fileUrl: submissions.fileUrl,
+      fileName: submissions.fileName,
+      fileType: submissions.fileType,
+      submittedAt: submissions.submittedAt,
+      status: submissions.status,
+      feedback: submissions.feedback,
+      score: submissions.score,
       candidate: users,
       task: tasks,
     })
@@ -81,78 +101,16 @@ export class DatabaseStorage implements IStorage {
     .innerJoin(users, eq(submissions.candidateId, users.id))
     .innerJoin(tasks, eq(submissions.taskId, tasks.id));
 
-    if (taskId) {
-      query = query.where(eq(submissions.taskId, taskId));
-    }
-    
-    // If both filters are present, we need to chain where clauses correctly
-    // The simplified logic above assumes one or the other or both. 
-    // Drizzle query builder allows chaining .where() which acts as AND.
-    
-    if (candidateId) {
-      // Re-apply taskId filter if needed because 'query' variable reassignment might lose context if not handled carefully in raw sql, 
-      // but Drizzle query builder is mutable for chains usually, or returns new instance. 
-      // Let's be explicit.
-      
-      // Let's restart the query construction for safety to handle combinations
-      const baseQuery = db.select({
-          ...submissions, // Spread all submission fields
-          // We need to map the join results to nested objects manually or let Drizzle handle it if we structured the select differently.
-          // However, the return type expects { ...submission, candidate: User, task: Task }
-          // Standard Drizzle join returns a flat object with table keys if using .select().from().innerJoin() without arguments to select()
-          // But here we passed arguments to select().
-          
-          // Actually, the spread `...submissions` will put submission fields at top level.
-          // `candidate: users` will put user fields in a `candidate` object.
-          // `task: tasks` will put task fields in a `task` object.
-          // This matches the return type.
-          candidate: users,
-          task: tasks,
-      })
-      .from(submissions)
-      .innerJoin(users, eq(submissions.candidateId, users.id))
-      .innerJoin(tasks, eq(submissions.taskId, tasks.id));
-      
-      const conditions = [];
-      if (taskId) conditions.push(eq(submissions.taskId, taskId));
-      if (candidateId) conditions.push(eq(submissions.candidateId, candidateId));
-      
-      if (conditions.length > 0) {
-        // @ts-ignore
-        return await baseQuery.where(conditions.reduce((acc, condition) => 
-             // Logic to combine conditions. But drizzle where() takes one condition. 
-             // We can use the helper above but simpler:
-             // just chain where.
-             undefined, undefined
-        ));
-      }
-    }
-    
-    // Retry robust implementation
-    const result = await db.select({
-        id: submissions.id,
-        taskId: submissions.taskId,
-        candidateId: submissions.candidateId,
-        content: submissions.content,
-        fileUrl: submissions.fileUrl,
-        fileName: submissions.fileName,
-        fileType: submissions.fileType,
-        submittedAt: submissions.submittedAt,
-        status: submissions.status,
-        feedback: submissions.feedback,
-        score: submissions.score,
-        candidate: users,
-        task: tasks
-    })
-    .from(submissions)
-    .innerJoin(users, eq(submissions.candidateId, users.id))
-    .innerJoin(tasks, eq(submissions.taskId, tasks.id));
+    const conditions = [];
+    if (taskId) conditions.push(eq(submissions.taskId, taskId));
+    if (candidateId) conditions.push(eq(submissions.candidateId, candidateId));
 
-    return result.filter(row => {
-        if (taskId && row.taskId !== taskId) return false;
-        if (candidateId && row.candidateId !== candidateId) return false;
-        return true;
-    });
+    if (conditions.length > 0) {
+      // @ts-ignore
+      query = query.where(and(...conditions));
+    }
+
+    return await query;
   }
 
   async getSubmission(id: number): Promise<Submission | undefined> {
@@ -168,6 +126,26 @@ export class DatabaseStorage implements IStorage {
   async updateSubmission(id: number, updates: Partial<InsertSubmission>): Promise<Submission | undefined> {
     const [submission] = await db.update(submissions).set(updates).where(eq(submissions.id, id)).returning();
     return submission;
+  }
+
+  // Attendance
+  async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
+    const [record] = await db.insert(attendance).values(insertAttendance).returning();
+    return record;
+  }
+
+  async getAttendance(userId?: number, taskId?: number): Promise<Attendance[]> {
+    let query = db.select().from(attendance);
+    const conditions = [];
+    if (userId) conditions.push(eq(attendance.userId, userId));
+    if (taskId) conditions.push(eq(attendance.taskId, taskId));
+    
+    if (conditions.length > 0) {
+      // @ts-ignore
+      query = query.where(and(...conditions));
+    }
+    
+    return await query;
   }
 }
 

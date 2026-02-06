@@ -98,18 +98,49 @@ export async function registerRoutes(
      next();
   };
 
-  // === USERS API ===
+  app.patch(api.users.get.path, requireAuth, async (req, res) => {
+    // Only admin can update anyone, or candidate can update themselves
+    if (req.user!.role !== 'admin' && req.user!.id !== Number(req.params.id)) {
+      return res.sendStatus(403);
+    }
 
-  app.get(api.users.list.path, requireAdmin, async (req, res) => {
-    const role = req.query.role as 'admin' | 'candidate' | undefined;
-    const users = await storage.getUsersByRole(role);
-    res.json(users);
-  });
-
-  app.get(api.users.get.path, requireAuth, async (req, res) => {
-    const user = await storage.getUser(Number(req.params.id));
+    // Security: users cannot change their email (username in this context)
+    const { username, role, ...updates } = req.body;
+    
+    const user = await storage.updateUser(Number(req.params.id), updates);
     if (!user) return res.sendStatus(404);
     res.json(user);
+  });
+
+  // === ATTENDANCE API ===
+  
+  app.post("/api/attendance", requireAuth, upload.single('photo'), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "Photo is required" });
+
+      const attendance = await storage.createAttendance({
+        userId: req.user!.id,
+        taskId: req.body.taskId && req.body.taskId !== "undefined" ? Number(req.body.taskId) : null,
+        photoUrl: `/uploads/${req.file.filename}`,
+        latitude: req.body.latitude || "0",
+        longitude: req.body.longitude || "0",
+        ipAddress: req.ip || "unknown",
+        deviceDetails: req.headers['user-agent'] || "unknown",
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Attendance recording error:", err);
+      res.status(500).json({ message: "Failed to record attendance" });
+    }
+  });
+
+  app.get("/api/attendance", requireAuth, async (req, res) => {
+    const userId = req.user!.role === 'admin' && req.query.userId ? Number(req.query.userId) : req.user!.id;
+    const taskId = req.query.taskId ? Number(req.query.taskId) : undefined;
+    
+    const records = await storage.getAttendance(userId, taskId);
+    res.json(records);
   });
 
   // === TASKS API ===

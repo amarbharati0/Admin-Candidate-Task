@@ -6,7 +6,10 @@ import { StatusBadge } from "@/components/status-badge";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckSquare, Clock, Trophy } from "lucide-react";
+import { ArrowRight, CheckSquare, Clock, Trophy, MapPin } from "lucide-react";
+import { AttendanceCapture } from "@/components/attendance-capture";
+import { ProfileManagement } from "@/components/profile-management";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function CandidateDashboard() {
   const { user } = useAuth();
@@ -31,14 +34,16 @@ export default function CandidateDashboard() {
         <div className="relative z-10 space-y-4">
           <h2 className="text-3xl font-display font-bold">Hello, {user?.fullName}!</h2>
           <p className="text-primary-foreground/80 max-w-xl">
-            Welcome to your dashboard. You have {activeTasks} tasks assigned to you. 
-            Check your progress and upcoming deadlines below.
+            Welcome to your dashboard. Your unique User ID is <span className="font-mono font-bold">{user?.candidateId}</span>. 
+            You have {activeTasks} tasks assigned.
           </p>
-          <Link href="/candidate/tasks">
-            <Button variant="secondary" className="mt-4 gap-2">
-              View Tasks <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/candidate/tasks">
+              <Button variant="secondary" className="gap-2">
+                View Tasks <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -72,46 +77,71 @@ export default function CandidateDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Upcoming Deadlines</h3>
-          {tasks?.slice(0, 3).map((task: any) => (
-            <Link key={task.id} href={`/candidate/tasks/${task.id}`}>
-              <div className="group bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm hover:border-primary/50 transition-colors cursor-pointer">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium group-hover:text-primary transition-colors">{task.title}</h4>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
-                  </div>
-                  <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-slate-600 dark:text-slate-400">
-                    {format(new Date(task.deadline), "MMM d")}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="attendance">Daily Attendance</TabsTrigger>
+          <TabsTrigger value="profile">My Profile</TabsTrigger>
+        </TabsList>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Recent Feedback</h3>
-          {submissions?.slice(0, 3).map((sub: any) => (
-            <div key={sub.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="font-medium text-sm">{sub.task?.title}</h4>
-                <StatusBadge status={sub.status} />
-              </div>
-              {sub.feedback ? (
-                <p className="text-sm text-muted-foreground italic">"{sub.feedback}"</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">No feedback yet</p>
+        <TabsContent value="overview" className="space-y-8 mt-6">
+          <div className="grid gap-8 md:grid-cols-2">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Upcoming Deadlines</h3>
+              {tasks?.slice(0, 3).map((task: any) => (
+                <Link key={task.id} href={`/candidate/tasks/${task.id}`}>
+                  <div className="group bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm hover:border-primary/50 transition-colors cursor-pointer">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium group-hover:text-primary transition-colors">{task.title}</h4>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                      </div>
+                      <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-slate-600 dark:text-slate-400">
+                        {format(new Date(task.deadline), "MMM d")}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Recent Feedback</h3>
+              {submissions?.slice(0, 3).map((sub: any) => (
+                <div key={sub.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium text-sm">{sub.task?.title}</h4>
+                    <StatusBadge status={sub.status} />
+                  </div>
+                  {sub.feedback ? (
+                    <p className="text-sm text-muted-foreground italic">"{sub.feedback}"</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No feedback yet</p>
+                  )}
+                </div>
+              ))}
+              {!submissions?.length && (
+                <p className="text-muted-foreground text-sm">No submissions yet.</p>
               )}
             </div>
-          ))}
-          {!submissions?.length && (
-            <p className="text-muted-foreground text-sm">No submissions yet.</p>
-          )}
-        </div>
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="attendance" className="mt-6">
+          <div className="max-w-xl">
+            <p className="text-muted-foreground mb-6">
+              Mark your daily attendance by capturing a live photo. Your location, device details, and IP address will be recorded for authenticity.
+            </p>
+            <AttendanceCapture />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="profile" className="mt-6">
+          <div className="max-w-3xl">
+            <ProfileManagement />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertTaskSchema, insertSubmissionSchema, users, tasks, submissions } from './schema';
+import { insertUserSchema, insertTaskSchema, insertSubmissionSchema, users, tasks, submissions, attendance, type Attendance } from './schema';
 
 // Shared error schemas
 export const errorSchemas = {
@@ -133,6 +133,24 @@ export const api = {
       responses: {
         200: z.custom<typeof submissions.$inferSelect>(),
         404: errorSchemas.notFound,
+      },
+    },
+  },
+  attendance: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/attendance',
+      input: z.object({ userId: z.coerce.number().optional(), taskId: z.coerce.number().optional() }).optional(),
+      responses: {
+        200: z.array(z.custom<Attendance>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/attendance',
+      responses: {
+        201: z.custom<Attendance>(),
+        400: errorSchemas.validation,
       },
     },
   }
