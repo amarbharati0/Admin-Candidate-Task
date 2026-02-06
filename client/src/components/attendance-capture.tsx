@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, MapPin, Smartphone, Globe } from "lucide-react";
+import { Camera, MapPin, Smartphone, Globe, Clock } from "lucide-react";
 import { useMarkAttendance } from "@/hooks/use-attendance";
 import { useToast } from "@/hooks/use-toast";
 
